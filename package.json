@@ -1,0 +1,98 @@
+{
+  "name": "teams-authenticator",
+  "version": "0.0.1",
+  "description": "Microsoft auth helper for quickly prototyping apps",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "dependencies": {
+    "@azure/msal-browser": "^2.12.1",
+    "@microsoft/teams-js": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.35",
+    "eslint": "^7.22.0",
+    "eslint-config-prettier": "^8.1.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.2.1",
+    "typescript": "^4.2.3"
+  },
+  "scripts": {
+    "dev": "nodemon -x \"yarn build\"",
+    "build": "tsc",
+    "lint": "eslint src/**",
+    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.ts\"",
+    "prepare": "npm run build",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjsheets/teams-authenticator.git"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "keywords": [],
+  "author": "Chad Sheets",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cjsheets/teams-authenticator/issues"
+  },
+  "homepage": "https://github.com/cjsheets/teams-authenticator#readme",
+  "nodemonConfig": {
+    "watch": [
+      "src/"
+    ],
+    "ext": "ts"
+  },
+  "eslintConfig": {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "sourceType": "module",
+      "project": "./tsconfig.json"
+    },
+    "env": {
+      "browser": true,
+      "es6": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "airbnb",
+      "airbnb-typescript",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "prettier",
+      "prettier/@typescript-eslint",
+      "plugin:prettier/recommended"
+    ],
+    "plugins": [
+      "@typescript-eslint",
+      "prettier"
+    ],
+    "rules": {
+      "prettier/prettier": [
+        "error",
+        {},
+        {
+          "usePrettierrc": true
+        }
+      ],
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/ban-ts-ignore": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "prefer-promise-reject-errors": "off",
+      "class-methods-use-this": "off"
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2,
+    "useTabs": false
+  }
+}
