@@ -5,8 +5,8 @@ export interface IAuthService {
   getToken(scopes: string[]): Promise<string>;
   login(): Promise<MSAL.AuthenticationResult | void>;
   logout(): Promise<void>;
-  getUser(): MSAL.AccountInfo;
-  handleCallback(): Promise<MSAL.AuthenticationResult>;
+  getUser(): Promise<MSAL.AccountInfo>;
+  handleLoginRedirect(): Promise<MSAL.AuthenticationResult>;
 }
 
 export enum Resource {

@@ -7,69 +7,55 @@ import { IAuthService } from './types';
 class MsalAuthService implements IAuthService {
   // https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_browser.html
   private app: MSAL.PublicClientApplication;
+  private account: MSAL.AccountInfo | null;
+
   private loginRequests: {
     silent: MSAL.SsoSilentRequest;
     interactive: MSAL.PopupRequest | MSAL.RedirectRequest;
   };
+
   private tokenRequests: {
     silent: { [scopes: string]: MSAL.SilentRequest };
     interactive: { [scopes: string]: MSAL.PopupRequest | MSAL.RedirectRequest };
   };
 
-  constructor(private usePopup = false) {
+  constructor(private msalConfig: MSAL.Configuration, private usePopup = false) {
     this.app = new MSAL.PublicClientApplication(this.config);
 
-    this.tokenRequests = {
-      silent: {},
-      interactive: {},
-    };
+    this.tokenRequests = { silent: {}, interactive: {} };
 
-    this.loginRequests = {
-      silent: {},
-      interactive: { scopes: [] },
-    };
+    this.loginRequests = { silent: {}, interactive: { scopes: [] } };
 
-    if (usePopup) {
-      this.loginRequests.interactive.redirectUri = window.location.href;
-    }
+    if (usePopup) this.loginRequests.interactive.redirectUri = window.location.href;
   }
 
   login() {
-    return this.app.ssoSilent(this.loginRequests.silent).catch((error) => {
-      console.error('Login Error: ' + error);
-      if (error instanceof MSAL.InteractionRequiredAuthError) {
-        this.loginInteractive();
-      }
-    });
+    return this.loginSilent().then(this.handleLoginResponse);
   }
 
-  private loginInteractive() {
-    return this.usePopup
-      ? this.app.loginPopup(this.loginRequests.interactive)
-      : this.app.loginRedirect(this.loginRequests.interactive);
+  handleLoginRedirect() {
+    return this.app.handleRedirectPromise(window.location.hash).then(this.handleLoginResponse);
   }
 
   logout() {
     return this.app.logout();
   }
 
-  handleCallback() {
-    return this.app.handleRedirectPromise();
-  }
-
   getUser() {
-    return this.app.getAllAccounts()?.[0];
+    return Promise.resolve(this.account);
   }
 
   getToken(scopes: string[]) {
     const { silent, interactive } = this.tokenRequests;
     const key = scopes.join('');
     if (!silent[key]) silent[key] = { scopes };
+    silent[key].account = this.account;
 
     return this.app
       .acquireTokenSilent(silent[key])
       .then((res) => res.accessToken)
       .catch((e) => {
+        console.log('caught', e instanceof MSAL.InteractionRequiredAuthError, e);
         if (!(e instanceof MSAL.InteractionRequiredAuthError)) {
           throw e;
         }
@@ -86,6 +72,27 @@ class MsalAuthService implements IAuthService {
       });
   }
 
+  private loginSilent() {
+    return this.getUser().then((user) => {
+      this.loginRequests.silent.loginHint = user?.username;
+      return this.app.ssoSilent(this.loginRequests.silent).catch((error) => {
+        console.error('Silent login failed, trying interactive', error);
+        this.loginInteractive();
+      });
+    });
+  }
+
+  private loginInteractive() {
+    return this.usePopup
+      ? this.app.loginPopup(this.loginRequests.interactive)
+      : this.app.loginRedirect(this.loginRequests.interactive);
+  }
+
+  private handleLoginResponse = (result: MSAL.AuthenticationResult) => {
+    this.account = this.app.getAllAccounts()?.[0];
+    return result;
+  };
+
   private isRedirectRequest(
     req: MSAL.PopupRequest | MSAL.RedirectRequest
   ): req is MSAL.RedirectRequest {
@@ -96,7 +103,14 @@ class MsalAuthService implements IAuthService {
     return {
       auth: {
         clientId: process.env.CLIENT_ID,
-        redirectUri: `${window.location.origin}/${process.env.MSAL_REDIRECT_PATH}`,
+        authority: 'https://login.microsoftonline.com/organizations',
+        redirectUri: `${window.location.origin}/`,
+        ...this.msalConfig.auth,
+      },
+      cache: {
+        cacheLocation: 'sessionStorage',
+        storeAuthStateInCookie: false,
+        ...this.msalConfig.cache,
       },
     };
   }

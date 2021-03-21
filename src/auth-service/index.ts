@@ -1,14 +1,14 @@
 // import MockAuthService from './mock-auth-service';
 import { isInsideIframe } from '..';
 import MsalAuthService from './msal-auth-service';
-// import TeamsAuthService from './teams-auth-service';
-// import TeamsSsoAuthService from './teams-sso-auth-service';
+import * as MSAL from '@azure/msal-browser';
+import TeamsAuthService from './teams-auth-service';
 import { IAuthService } from './types';
 
 export default class AuthService implements IAuthService {
   private authService: IAuthService;
 
-  constructor() {
+  constructor(private msalConfig: MSAL.Configuration, private usePopup = false) {
     this.initAuthService();
   }
 
@@ -16,8 +16,8 @@ export default class AuthService implements IAuthService {
     return this.authService.config;
   }
 
-  handleCallback() {
-    return this.authService.handleCallback();
+  handleLoginRedirect() {
+    return this.authService.handleLoginRedirect();
   }
 
   login() {
@@ -43,12 +43,9 @@ export default class AuthService implements IAuthService {
     if (params.get('mockData')) {
       //this.authService = new MockAuthService();
     } else if (params.get('isTeamsFrame') || isInsideIframe()) {
-      // Teams doesn't allow query parameters for Team scope URIs
-      //this.authService = new TeamsAuthService();
-    } else if (params.get('isTeamsFrameSSO')) {
-      //this.authService = new TeamsSsoAuthService();
+      this.authService = new TeamsAuthService();
     } else {
-      this.authService = new MsalAuthService();
+      this.authService = new MsalAuthService(this.msalConfig, this.usePopup);
     }
   }
 }
