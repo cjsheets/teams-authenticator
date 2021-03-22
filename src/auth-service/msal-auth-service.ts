@@ -21,6 +21,7 @@ class MsalAuthService implements IAuthService {
 
   constructor(private msalConfig: MSAL.Configuration, private usePopup = false) {
     this.app = new MSAL.PublicClientApplication(this.config);
+    this.account = this.app.getAllAccounts()?.[0];
 
     this.tokenRequests = { silent: {}, interactive: {} };
 
@@ -83,9 +84,19 @@ class MsalAuthService implements IAuthService {
   }
 
   private loginInteractive() {
-    return this.usePopup
-      ? this.app.loginPopup(this.loginRequests.interactive)
-      : this.app.loginRedirect(this.loginRequests.interactive);
+    const login = () =>
+      this.usePopup
+        ? this.app.loginPopup(this.loginRequests.interactive)
+        : this.app.loginRedirect(this.loginRequests.interactive);
+
+    return login().catch((e) => {
+      if (e.message?.indexOf('interaction_in_progress') === 0) {
+        window.sessionStorage.clear();
+        return login() as Promise<MSAL.AuthenticationResult | void>;
+      }
+
+      throw e;
+    });
   }
 
   private handleLoginResponse = (result: MSAL.AuthenticationResult) => {
